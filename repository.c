@@ -280,14 +280,14 @@ PHP_METHOD(git2_repository, headDetached)
 {{{ proto: Git2\Repository::headOrphan()
  An orphan branch is one named from HEAD but which doesn't exist in	
  the refs namespace, because it doesn't have any commit to point to.
-*/                                                                                           
+*/
 PHP_METHOD(git2_repository, headOrphan)
 {
 	php_git2_repository *m_repository;
 
 	m_repository = PHP_GIT2_GET_OBJECT(php_git2_repository, getThis());
 	if (m_repository->repository != NULL) {
-		if (git_repository_head_orphan(m_repository->repository) == 1) {
+		if (git_repository_head_unborn(m_repository->repository) == 1) {
 			RETURN_TRUE;
 		} else {
 			RETURN_FALSE;
@@ -531,7 +531,6 @@ PHP_METHOD(git2_repository, checkout)
 static int printer(
 	void *data,
 	const git_diff_delta *delta,
-	const git_diff_range *range,
 	char usage,
 	const char *line,
 	size_t line_len)
@@ -551,7 +550,6 @@ PHP_METHOD(git2_repository, diff)
 	zval *old, *new;
 	php_git2_tree *m_old, *m_new;
 	php_git2_repository *m_repository;
-	git_diff_list *list;
 	smart_str string = {0};
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
@@ -563,11 +561,10 @@ PHP_METHOD(git2_repository, diff)
 	m_old = PHP_GIT2_GET_OBJECT(php_git2_tree, old);
 	m_new = PHP_GIT2_GET_OBJECT(php_git2_tree, new);
 
-	git_diff_tree_to_tree(m_repository->repository, NULL, m_old->tree, m_new->tree, &list);
+	git_diff_tree_to_tree(m_repository->repository, NULL, m_old->tree, m_new->tree, NULL);
 	
-	git_diff_print_compact(list, &string, printer);
+	git_diff_print(m_repository->repository, GIT_DIFF_FORMAT_NAME_STATUS, &string, printer);
 	smart_str_0(&string);
-	git_diff_list_free(list);
 	
 	RETVAL_STRING(string.c, 0);
 }
